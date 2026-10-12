@@ -53,9 +53,19 @@ func TestDetectGitInfo(t *testing.T) {
 		t.Errorf("worktree: got (%q, %q), want (wt, feature)", name, branch)
 	}
 
-	// No repo anywhere up the tree.
-	if name, branch := detectGitInfo(root); name != "" || branch != "" {
-		t.Errorf("no repo: got (%q, %q), want empty", name, branch)
+	// No .git within reach: the walk caps at 10 ancestors, so a directory 12
+	// levels below <root> can never see <root>/repo/.git. Asserting from this
+	// deep directory instead of <root> also keeps the test hermetic on hosts
+	// where the temp dir sits inside a repository (dotfiles checkouts, agent
+	// sandboxes, CI workspaces) — detectGitInfo cannot escape far enough to
+	// find those, and must report empty.
+	deep := root
+	for i := 0; i < 12; i++ {
+		deep = filepath.Join(deep, "d")
+		mustMkdir(t, deep)
+	}
+	if name, branch := detectGitInfo(deep); name != "" || branch != "" {
+		t.Errorf("no repo in reach: got (%q, %q), want empty", name, branch)
 	}
 }
 
