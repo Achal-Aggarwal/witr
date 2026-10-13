@@ -54,12 +54,13 @@ func TestDetectGitInfo(t *testing.T) {
 	}
 
 	// No .git within reach: the walk caps at 10 ancestors, so a directory 12
-	// levels below <root> can never see <root>/repo/.git. Asserting from this
-	// deep directory instead of <root> also keeps the test hermetic on hosts
-	// where the temp dir sits inside a repository (dotfiles checkouts, agent
-	// sandboxes, CI workspaces) — detectGitInfo cannot escape far enough to
-	// find those, and must report empty.
-	deep := root
+	// levels below <root>/repo can never see <root>/repo/.git. Starting from
+	// inside the repo (not beside it) also keeps the cap honest: raising the
+	// cap would surface repo/.git and fail this assertion. The probe stays
+	// hermetic on hosts where the temp dir sits inside a repository (dotfiles
+	// checkouts, agent sandboxes, CI workspaces) — detectGitInfo cannot
+	// escape far enough to find those, and must report empty.
+	deep := repo
 	for i := 0; i < 12; i++ {
 		deep = filepath.Join(deep, "d")
 		mustMkdir(t, deep)
